@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SCL-90 深度心理测评报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 Google Fonts 增加数字美感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; 
+            background-color: #F2F4F6; 
+        }
+        .font-num { font-family: 'Outfit', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .btn-active:active { transform: scale(0.98); opacity: 0.9; }
+        
+        /* 报告卡片纹理背景 */
+        .report-bg {
+            background-color: #ffffff;
+            background-image: radial-gradient(#F1F5F9 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* 玻璃拟态导航 */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col items-center justify-center">
+
+    <div id="app" class="w-full max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
+        
+        <!-- 1. 封面页 -->
+        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-rose-50 to-white text-center">
+            <div class="w-full max-w-[280px] mb-8 hover:scale-105 transition-transform duration-300 shadow-2xl shadow-rose-200 rounded-3xl overflow-hidden">
+                <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+                  <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FF9A9E;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#FECFEF;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="800" height="800" fill="url(#grad1)" />
+                  <circle cx="400" cy="400" r="300" fill="rgba(255,255,255,0.3)" />
+                  <circle cx="400" cy="400" r="200" fill="rgba(255,255,255,0.6)" />
+                  <text x="400" y="380" font-family="sans-serif" font-size="120" fill="#FF2442" text-anchor="middle" font-weight="900">90</text>
+                  <text x="400" y="480" font-family="sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">SCL-90</text>
+                  <text x="400" y="550" font-family="sans-serif" font-size="24" fill="#666" text-anchor="middle">专业心理健康测评</text>
+                </svg>
+            </div>
+
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">探索内心世界</h1>
+            <p class="text-slate-500 mb-8 text-sm font-medium">基于国际公认 SCL-90 量表 · 深度画像</p>
+            
+            <div class="bg-white border border-rose-100 p-5 rounded-2xl w-full mb-8 text-left shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-[#FF2442]"></div>
+                <h3 class="font-bold text-slate-800 text-sm mb-2 flex items-center">
+                    <span class="mr-2">💡</span> 测试需知
+                </h3>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    请根据您<b>最近一周</b>的实际感受回答。<br>无对错之分，请直觉作答，以获取最准确结果。
+                </p>
+            </div>
+
+            <button @click="startTest" class="btn-active w-full bg-[#FF2442] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+                <span>开始测评</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+            </button>
+        </div>
+
+        <!-- 2. 答题页 -->
+        <div v-else-if="step === 'test'" class="flex-1 flex flex-col bg-slate-50">
+            <div class="h-1.5 bg-slate-200 w-full">
+                <div class="h-full bg-[#FF2442] transition-all duration-300 ease-out" :style="{ width: progress + '%' }"></div>
+            </div>
+            
+            <div class="p-6 flex-1 overflow-y-auto no-scrollbar flex flex-col justify-center max-w-md mx-auto w-full">
+                <div class="mb-8">
+                    <span class="inline-block bg-rose-100 text-[#FF2442] px-3 py-1 rounded-full text-xs font-bold mb-4 font-num">
+                        Question {{ currentQuestionIndex + 1 }} / {{ questions.length }}
+                    </span>
+                    <h2 class="text-2xl font-bold text-slate-800 leading-snug">
+                        {{ questions[currentQuestionIndex].text }}
+                    </h2>
+                </div>
+
+                <div class="space-y-3">
+                    <button v-for="(option, val) in options" :key="val" 
+                        @click="selectOption(val)"
+                        class="btn-active w-full text-left p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-[#FF2442] hover:shadow-md transition-all flex justify-between items-center group">
+                        <span class="font-medium text-slate-600 group-hover:text-[#FF2442]">{{ option }}</span>
+                        <div class="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-[#FF2442] flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-[#FF2442] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 结果分析页 (重构版) -->
+        <div v-else-if="step === 'result'" class="flex-1 flex flex-col bg-[#F2F4F6] overflow-y-auto no-scrollbar relative">
+            <!-- 顶部悬浮导航 -->
+            <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-20 border-b border-white/50">
+                <span class="font-bold text-slate-800 text-sm">📋 测评档案</span>
+                <button @click="downloadReport" class="bg-slate-900 text-white text-xs px-4 py-2 rounded-full font-medium hover:bg-slate-700 transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    保存报告
+                </button>
+            </div>
+
+            <!-- 报告截图区域 -->
+            <div class="p-4 pb-24" id="report-capture">
+                <div class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+                    
+                    <!-- 报告头部 -->
+                    <div class="bg-slate-900 text-white p-6 pb-12 relative overflow-hidden">
+                        <div class="absolute top-[-50%] right-[-20%] w-64 h-64 bg-[#FF2442] rounded-full opacity-20 blur-3xl"></div>
+                        <div class="absolute bottom-[-20%] left-[-10%] w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
+                        
+                        <div class="flex justify-between items-start relative z-10">
+                            <div>
+                                <h1 class="text-2xl font-bold mb-1">心理健康画像</h1>
+                                <p class="text-slate-400 text-xs font-num tracking-wider uppercase">SCL-90 / REF: {{ Math.floor(Math.random()*100000) }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-bold font-num">{{ totalScore }}</p>
+                                <p class="text-[10px] text-slate-400 uppercase">Total Score</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 核心结论卡片 (上移叠加) -->
+                    <div class="mx-4 -mt-8 relative z-10 bg-white p-5 rounded-2xl shadow-lg border-l-4" :class="overallStatus.borderColor">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-slate-400 uppercase font-bold tracking-wide">综合状态评估</span>
+                            <span class="px-2 py-1 rounded text-xs font-bold" :class="overallStatus.badgeClass">
+                                {{ overallStatus.label }}
+                            </span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            {{ overallStatus.desc }}
+                        </p>
+                    </div>
+
+                    <!-- 雷达图可视化 -->
+                    <div class="p-6">
+                        <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
+                            <span class="w-1 h-4 bg-[#FF2442] rounded-full mr-2"></span>
+                            症状分布雷达
+                        </h4>
+                        <div class="w-full aspect-square max-h-64 relative">
+                            <canvas id="radarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 关键指标数据网格 -->
+                    <div class="grid grid-cols-3 gap-3 px-4 mb-6">
+                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                            <p class="text-xs text-slate-400 mb-1">平均分</p>
+                            <p class="text-xl font-bold text-slate-800 font-num">{{ avgScore }}</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                            <p class="text-xs text-slate-400 mb-1">阳性项目</p>
+                            <p class="text-xl font-bold text-[#FF2442] font-num">{{ positiveItems }}</p>
+                            <p class="text-[10px] text-slate-400">/ 90</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                            <p class="text-xs text-slate-400 mb-1">阴性项目</p>
+                            <p class="text-xl font-bold text-green-600 font-num">{{ 90 - positiveItems }}</p>
+                        </div>
+                    </div>
+
+                    <!-- 详细因子分析 -->
+                    <div class="px-4 mb-6">
+                        <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
+                            <span class="w-1 h-4 bg-blue-500 rounded-full mr-2"></span>
+                            深度因子解码
+                        </h4>
+                        
+                        <div class="space-y-3">
+                            <div v-for="factor in factors" :key="factor.name" class="flex items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                <!-- 因子名 -->
+                                <div class="w-20 flex-shrink-0">
+                                    <p class="text-sm font-bold text-slate-700">{{ factor.name }}</p>
+                                </div>
+                                
+                                <!-- 进度条 -->
+                                <div class="flex-1 mx-3">
+                                    <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full transition-all duration-1000"
+                                             :class="getScoreColorClass(factor.score)"
+                                             :style="{ width: (factor.score / 5 * 100) + '%' }"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 分数与状态 -->
+                                <div class="w-20 text-right">
+                                    <span class="block text-sm font-bold font-num" :class="getTextColorClass(factor.score)">
+                                        {{ factor.score.toFixed(2) }}
+                                    </span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                                        {{ getLevel(factor.score) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 智能建议/心理处方 -->
+                    <div class="bg-slate-50 mx-4 mb-6 p-4 rounded-2xl border border-dashed border-slate-300">
+                        <h4 class="font-bold text-slate-800 text-sm mb-3">💡 专属调节建议</h4>
+                        <div v-if="topRiskFactor" class="text-xs text-slate-600 space-y-2">
+                            <p>您的主要困扰可能来自 <b>{{ topRiskFactor.name }}</b>。</p>
+                            <p class="bg-white p-2 rounded border border-slate-100 shadow-sm">
+                                {{ getAdvice(topRiskFactor.name) }}
+                            </p>
+                        </div>
+                        <div v-else class="text-xs text-green-600 bg-green-50 p-2 rounded">
+                            您的心理状态非常健康！请继续保持乐观的生活态度，适度运动，享受生活。
+                        </div>
+                    </div>
+
+                    <!-- 底部水印 -->
+                    <div class="text-center py-6 bg-slate-900">
+                         <svg width="150" height="40" viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg" class="mx-auto opacity-70">
+                           <text x="75" y="25" font-family="sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">SCL-90 · 心理档案</text>
+                        </svg>
+                        <p class="text-[10px] text-slate-500 mt-1">结果仅供参考，不作为医学诊断依据</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    step: 'cover',
+                    currentQuestionIndex: 0,
+                    answers: [],
+                    options: {
+                        1: "从无 (没有感觉)",
+                        2: "轻度 (偶有，不影响)",
+                        3: "中度 (有的，有一定影响)",
+                        4: "偏重 (常有，影响较大)",
+                        5: "严重 (十分严重)"
+                    },
+                    // 90道完整题目
+                    questions: [
+                        {id:1, text:"头痛"}, {id:2, text:"神经过敏，心中不踏实"}, {id:3, text:"头脑中有不必要的想法或字句盘旋"}, {id:4, text:"头晕或昏倒"}, {id:5, text:"对异性的兴趣减退"},
+                        {id:6, text:"对旁人责备求全"}, {id:7, text:"感到别人能控制您的思想"}, {id:8, text:"责怪别人制造麻烦"}, {id:9, text:"忘性大"}, {id:10, text:"担心自己的衣饰整齐及仪态的端正"},
+                        {id:11, text:"容易烦恼和激动"}, {id:12, text:"胸痛"}, {id:13, text:"害怕空旷的场所或街道"}, {id:14, text:"感到自己的精力下降，活动减慢"}, {id:15, text:"想结束自己的生命"},
+                        {id:16, text:"听到旁人听不到的声音"}, {id:17, text:"发抖"}, {id:18, text:"感到绝大多数人不可信"}, {id:19, text:"胃口不好"}, {id:20, text:"容易哭泣"},
+                        {id:21, text:"同异性相处时感到害羞不自在"}, {id:22, text:"感到受骗，中了圈套或有人想抓住您"}, {id:23, text:"无缘无故地突然感到害怕"}, {id:24, text:"自己不能控制地发脾气"}, {id:25, text:"怕单独出门"},
+                        {id:26, text:"经常责怪自己"}, {id:27, text:"腰痛"}, {id:28, text:"感到难以完成任务"}, {id:29, text:"感到孤独"}, {id:30, text:"感到苦闷"},
+                        {id:31, text:"过分担忧"}, {id:32, text:"对事物不感兴趣"}, {id:33, text:"感到害怕"}, {id:34, text:"您的情感容易受到伤害"}, {id:35, text:"旁人能知道您的私下想法"},
+                        {id:36, text:"感到别人不理解您、不同情您"}, {id:37, text:"感到人们对您不友好，不喜欢您"}, {id:38, text:"做事必须做得很慢以保证做得正确"}, {id:39, text:"心跳得很厉害"}, {id:40, text:"恶心或胃部不舒服"},
+                        {id:41, text:"感到比不上别人"}, {id:42, text:"肌肉酸痛"}, {id:43, text:"感到有人在看着您、谈论您"}, {id:44, text:"难以入睡"}, {id:45, text:"做事必须反复检查"},
+                        {id:46, text:"难以作出决定"}, {id:47, text:"怕乘电车、公共汽车、地铁或火车"}, {id:48, text:"呼吸有困难"}, {id:49, text:"一阵阵发冷或发热"}, {id:50, text:"因为感到害怕而避开某些东西、场合或活动"},
+                        {id:51, text:"脑子变空了"}, {id:52, text:"身体发麻或刺痛"}, {id:53, text:"喉咙有梗塞感"}, {id:54, text:"感到没有前途，没有希望"}, {id:55, text:"不能集中注意力"},
+                        {id:56, text:"感到身体的某一部分软弱无力"}, {id:57, text:"感到紧张或容易紧张"}, {id:58, text:"感到手或脚发重"}, {id:59, text:"想到死亡的事"}, {id:60, text:"吃得太多"},
+                        {id:61, text:"当别人看着您或谈论您时感到不自在"}, {id:62, text:"有一些不属于您自己的想法"}, {id:63, text:"有想打人或伤害他人的冲动"}, {id:64, text:"醒得太早"}, {id:65, text:"必须反复洗手、点数目或触摸某些东西"},
+                        {id:66, text:"睡得不稳不深"}, {id:67, text:"有想摔坏或破坏东西的冲动"}, {id:68, text:"有些人与您为敌"}, {id:69, text:"在商店或电影院等人多的地方感到不自在"}, {id:70, text:"感到任何事情都很困难"},
+                        {id:71, text:"感到心神不宁"}, {id:72, text:"感到自己的头痛"}, {id:73, text:"不合群"}, {id:74, text:"经常争论"}, {id:75, text:"单独一人时神经很紧张"},
+                        {id:76, text:"别人对您的成绩没有作出恰当的评价"}, {id:77, text:"即使和别人在一起也感到孤单"}, {id:78, text:"感到坐立不安"}, {id:79, text:"感到自己一无是处"}, {id:80, text:"感到熟悉的东西变成陌生或不像是真的"},
+                        {id:81, text:"大叫或摔东西"}, {id:82, text:"害怕在公共场合会晕倒"}, {id:83, text:"感到别人想利用您"}, {id:84, text:"为一些有关性的想法而很苦恼"}, {id:85, text:"您认为应该因为自己的过错而受到惩罚"},
+                        {id:86, text:"感到要赶快把事情做完"}, {id:87, text:"感到自己的身体有严重问题"}, {id:88, text:"从未感到和其他人很亲近"}, {id:89, text:"感到有罪恶感"}, {id:90, text:"感到自己的脑子有毛病"}
+                    ],
+                    factors: []
+                }
+            },
+            computed: {
+                progress() { return ((this.currentQuestionIndex) / this.questions.length) * 100; },
+                totalScore() { return this.answers.reduce((a, b) => a + b, 0); },
+                avgScore() { return this.answers.length ? (this.totalScore / this.answers.length).toFixed(2) : 0; },
+                positiveItems() { return this.answers.filter(s => s >= 2).length; },
+                
+                // 计算最高分因子（用于建议）
+                topRiskFactor() {
+                    if (this.factors.length === 0) return null;
+                    // 过滤出分数大于2的因子，并排序
+                    const risks = this.factors.filter(f => f.score >= 2).sort((a, b) => b.score - a.score);
+                    return risks.length > 0 ? risks[0] : null;
+                },
+
+                // 综合状态评估逻辑
+                overallStatus() {
+                    const avg = parseFloat(this.avgScore);
+                    const pos = this.positiveItems;
+                    
+                    if (avg < 1.5 && pos < 10) {
+                        return { 
+                            label: '心理阳光 ☀️', 
+                            desc: '您的心理状态非常健康，适应能力强，心态积极。请继续保持这种良好的生活节奏！',
+                            borderColor: 'border-green-500',
+                            badgeClass: 'bg-green-100 text-green-600'
+                        };
+                    } else if (avg < 2) {
+                        return { 
+                            label: '状态良好 🌿', 
+                            desc: '整体状态不错，可能偶有小情绪，但属于正常的生活波动。注意劳逸结合即可。',
+                            borderColor: 'border-emerald-400',
+                            badgeClass: 'bg-emerald-100 text-emerald-600'
+                        };
+                    } else if (avg < 3) {
+                        return { 
+                            label: '轻度预警 ⚠️', 
+                            desc: '您近期可能承受了一些压力，出现了一定的心理波动。建议适当放松，多进行户外活动或与朋友倾诉。',
+                            borderColor: 'border-yellow-400',
+                            badgeClass: 'bg-yellow-100 text-yellow-700'
+                        };
+                    } else {
+                        return { 
+                            label: '需要关注 🆘', 
+                            desc: '您的心理负担较重，多个方面存在明显困扰。强烈建议寻求专业的心理咨询师帮助，不要独自承担。',
+                            borderColor: 'border-red-500',
+                            badgeClass: 'bg-red-100 text-red-600'
+                        };
+                    }
+                }
+            },
+            methods: {
+                startTest() { this.step = 'test'; },
+                selectOption(val) {
+                    this.answers.push(parseInt(val));
+                    if (this.currentQuestionIndex < this.questions.length - 1) {
+                        this.currentQuestionIndex++;
+                    } else {
+                        this.calculateResult();
+                    }
+                },
+                getScoreColorClass(score) {
+                    if (score < 2) return 'bg-green-400';
+                    if (score < 3) return 'bg-yellow-400';
+                    return 'bg-red-500';
+                },
+                getTextColorClass(score) {
+                    if (score < 2) return 'text-green-600';
+                    if (score < 3) return 'text-yellow-600';
+                    return 'text-red-600';
+                },
+                getLevel(score) {
+                    if(score < 2) return "正常";
+                    if(score < 3) return "轻度";
+                    if(score < 4) return "中度";
+                    return "严重";
+                },
+                getAdvice(factorName) {
+                    const adviceMap = {
+                        '躯体化': '您可能将心理压力转化为了身体不适（如头痛、胃痛）。建议进行渐进式肌肉放松训练，并排除器质性病变。',
+                        '强迫症状': '尝试接纳那些反复出现的念头，不要刻意压制。设定专门的“担忧时间”，其余时间专注于当下的行动。',
+                        '人际敏感': '建立自信是关键。不要过度解读他人的眼神或言语，尝试在小群体中主动表达一次自己的观点。',
+                        '抑郁': '接纳自己的低落情绪，但不要沉浸其中。坚持运动（如慢跑），保持规律作息，寻找信任的人倾诉。',
+                        '焦虑': '专注于呼吸。当感到惊恐时，尝试4-7-8呼吸法。减少咖啡因摄入，关注当下能控制的事情。',
+                        '敌对': '当愤怒来袭时，先离开现场冷静3分钟。尝试用“我感到...”代替“你总是...”来表达不满。',
+                        '恐怖': '采用系统脱敏法，从轻微恐惧的场景开始逐步尝试接触。相信恐惧感是会随着时间消退的。',
+                        '偏执': '尝试换位思考，问自己“是否有其他解释的可能性？”。建立对他人的基本信任，减少无端的猜疑。',
+                        '精神病性': '如果感觉思绪混乱或感知异常，请务必保证充足睡眠，避免独处，并寻求专业医生的帮助。'
+                    };
+                    return adviceMap[factorName] || '建议保持规律作息，多进行有氧运动。';
+                },
+                calculateResult() {
+                    const getScore = (id) => this.answers[id - 1] || 1;
+                    const calcFactor = (ids) => ids.reduce((acc, id) => acc + getScore(id), 0) / ids.length;
+
+                    const factorDefinitions = [
+                        { name: '躯体化', ids: [1,4,12,27,40,42,48,49,53,56,58,86] },
+                        { name: '强迫症状', ids: [3,9,10,28,38,45,46,51,55,65] },
+                        { name: '人际敏感', ids: [6,21,34,36,37,41,61,69,73] },
+                        { name: '抑郁', ids: [5,14,15,20,22,26,29,30,31,32,54,71,79] },
+                        { name: '焦虑', ids: [2,17,23,33,39,57,72,78,80,81] },
+                        { name: '敌对', ids: [11,24,63,67,74,81] },
+                        { name: '恐怖', ids: [13,25,47,50,70,75,82] },
+                        { name: '偏执', ids: [8,18,43,68,76,83] },
+                        { name: '精神病性', ids: [7,16,35,62,77,84,85,87,88,90] }
+                    ];
+
+                    this.factors = factorDefinitions.map(f => ({ name: f.name, score: calcFactor(f.ids) }));
+                    this.step = 'result';
+                    this.$nextTick(() => this.renderChart());
+                },
+                renderChart() {
+                    const ctx = document.getElementById('radarChart').getContext('2d');
+                    // 创建渐变色
+                    const gradient = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
+                    gradient.addColorStop(0, 'rgba(255, 36, 66, 0.1)');
+                    gradient.addColorStop(1, 'rgba(255, 36, 66, 0.4)');
+
+                    new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: this.factors.map(f => f.name),
+                            datasets: [{
+                                label: '因子分',
+                                data: this.factors.map(f => f.score),
+                                backgroundColor: gradient,
+                                borderColor: '#FF2442',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#fff',
+                                pointBorderColor: '#FF2442',
+                                pointRadius: 3
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            scales: {
+                                r: {
+                                    angleLines: { color: '#eee' },
+                                    grid: { color: '#f0f0f0' },
+                                    pointLabels: { 
+                                        font: { size: 11, family: "'PingFang SC', sans-serif" },
+                                        color: '#64748b'
+                                    },
+                                    suggestedMin: 0,
+                                    suggestedMax: 4,
+                                    ticks: { display: false } // 隐藏刻度数字，更简洁
+                                }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                },
+                downloadReport() {
+                    const element = document.getElementById("report-capture");
+                    // 临时隐藏滚动条以获得更好截图
+                    element.style.overflow = 'visible'; 
+                    
+                    html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: "#F2F4F6",
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = '我的心理画像.png';
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+                        alert("✅ 报告已生成！请查看相册或下载文件夹。");
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

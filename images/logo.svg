@@ -1,0 +1,8 @@
+<svg width="400" height="100" viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 胶囊形状背景 -->
+  <rect x="50" y="10" width="300" height="80" rx="40" fill="#333333" />
+  
+  <!-- 文字 -->
+  <text x="200" y="45" font-family="'PingFang SC', sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="bold">SCL-90 在线测评</text>
+  <text x="200" y="70" font-family="'PingFang SC', sans-serif" font-size="14" fill="#FF2442" text-anchor="middle">RedNote · 懂你的心理测试</text>
+</svg>
