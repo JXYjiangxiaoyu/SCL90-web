@@ -28,6 +28,8 @@
         }
 
         .font-num { font-family: 'Outfit', sans-serif; }
+        
+        /* 隐藏滚动条的核心样式 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -80,7 +82,6 @@
 <body>
 
     <!-- 主容器：使用 h-full 和 fixed 布局来确保在 iOS 上不乱跑 -->
-    <!-- pt-safe 改为通过 safe-padding-top 类控制 -->
     <div id="app" class="w-full max-w-md mx-auto h-full bg-white shadow-2xl relative overflow-hidden flex flex-col safe-padding-top">
         
         <!-- 0. 考前引导弹窗 -->
@@ -109,12 +110,11 @@
             </div>
         </transition>
 
-        <!-- 1. 封面页 (重点修复区域) -->
-        <!-- 使用 flex-col 和 justify-center + gap，避免使用 justify-around 导致的布局松散 -->
-        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-padding-bottom">
+        <!-- 1. 封面页 (重点修复区域：电脑端滚动条已移除) -->
+        <!-- 修改说明：添加了 no-scrollbar 类，确保在 PC 端不显示滚动条，但在小屏幕仍可滚动 -->
+        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-padding-bottom no-scrollbar">
             <div class="absolute top-[-10%] right-[-10%] w-40 h-40 bg-red-100 rounded-full blur-3xl opacity-50"></div>
             
-            <!-- 修复：图片使用百分比宽度，在小屏上自动缩小，避免挤压内容 -->
             <div class="w-[45vw] max-w-[200px] aspect-square animate-float relative z-10 flex-shrink-0">
                 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-2xl rounded-[2.5rem]">
                   <defs>
@@ -134,7 +134,7 @@
 
             <div class="relative z-10 flex-shrink-0 w-full">
                 <div class="inline-block px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold mb-3 tracking-wide border border-red-100">
-                    国际公认标准 • 90项指标
+                    国际公认标准 • 90个条目
                 </div>
                 <h1 class="text-4xl font-black mb-2 tracking-tight leading-tight text-gradient-title">
                     SCL-90<br>深度心理测评
@@ -398,11 +398,12 @@
                     step: 'cover',
                     showStartModal: false,
                     countdown: 3,
+                    timer: null, // 修改 1：将计时器提升为 data 属性，防止 iOS 下多重触发丢失引用
                     currentQuestionIndex: 0,
                     tempSelectedOption: null,
                     isTransitioning: false,
                     transitionName: 'slide-next',
-                    chartInstance: null, // 存储图表实例
+                    chartInstance: null,
                     answers: [],
                     optionsWithEmojis: {
                         1: { text: "从无 (没有感觉)", emoji: "😶" },
@@ -608,15 +609,19 @@
             methods: {
                 triggerStartModal() {
                     this.showStartModal = true;
+                    // 修改 2：清理之前的定时器，防止 Apple 设备上因点击过快导致的多重倒计时并发 bug
+                    if (this.timer) clearInterval(this.timer);
                     this.countdown = 3;
-                    const timer = setInterval(() => {
+                    
+                    this.timer = setInterval(() => {
                         this.countdown--;
                         if (this.countdown <= 0) {
-                            clearInterval(timer);
+                            clearInterval(this.timer);
                         }
                     }, 1000);
                 },
                 confirmStart() {
+                    if (this.timer) clearInterval(this.timer);
                     this.showStartModal = false;
                     this.step = 'test';
                 },
