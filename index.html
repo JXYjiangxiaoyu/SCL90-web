@@ -2,34 +2,45 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键：viewport 设置禁止缩放，且适配刘海屏 -->
+    <!-- viewport-fit=cover 适配刘海屏 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SCL-90 深度心理测评报告</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
-        /* iOS 高度修正 & 全局设置 */
+        /* iOS 高度适配终极方案：使用 dvh */
+        :root {
+            --app-height: 100dvh;
+        }
+
         html, body {
-            height: 100%;
-            width: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* 禁止 body 滚动，交由内部容器滚动 */
+            width: 100%;
+            height: 100%; /* Fallback */
+            height: var(--app-height);
+            overflow: hidden;
             background-color: #F2F4F6;
-            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
-            /* 针对 iOS Safari 的高度修复 */
-            height: -webkit-fill-available; 
+            -webkit-touch-callout: none; /* 禁止长按呼出菜单 */
+        }
+
+        #app {
+            height: 100%;
+            height: var(--app-height);
         }
 
         .font-num { font-family: 'Outfit', sans-serif; }
         
-        /* 隐藏滚动条的核心样式 */
+        /* 隐藏滚动条 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -38,20 +49,24 @@
             background-image: radial-gradient(#F1F5F9 1px, transparent 1px);
             background-size: 20px 20px;
         }
+        
         .glass-nav {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); /* Safari 支持 */
         }
+        
         .text-gradient-title {
             background: linear-gradient(45deg, #FF2442 0%, #FF6B6B 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        
         .progress-gradient {
             background: linear-gradient(90deg, #FF9A9E 0%, #FF2442 100%);
             box-shadow: 0 0 10px rgba(255, 36, 66, 0.3);
         }
+
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
@@ -59,30 +74,34 @@
         }
         .animate-float { animation: float 6s ease-in-out infinite; }
 
-        .slide-next-enter-active, .slide-next-leave-active { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); position: absolute; width: 100%; }
-        .slide-next-enter-from { opacity: 0; transform: translateX(50px); }
-        .slide-next-leave-to { opacity: 0; transform: translateX(-50px); }
+        /* 优化转场动画，移除 absolute 防止 iOS 高度塌陷，改为 transform 控制 */
+        .slide-next-enter-active, .slide-next-leave-active,
+        .slide-prev-enter-active, .slide-prev-leave-active {
+            transition: all 0.3s ease-out;
+        }
+        
+        /* 简单的淡入淡出+位移，避免复杂的 position 切换 */
+        .slide-next-enter-from { opacity: 0; transform: translateX(20px); }
+        .slide-next-leave-to { opacity: 0; transform: translateX(-20px); }
 
-        .slide-prev-enter-active, .slide-prev-leave-active { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); position: absolute; width: 100%; }
-        .slide-prev-enter-from { opacity: 0; transform: translateX(-50px); }
-        .slide-prev-leave-to { opacity: 0; transform: translateX(50px); }
+        .slide-prev-enter-from { opacity: 0; transform: translateX(-20px); }
+        .slide-prev-leave-to { opacity: 0; transform: translateX(20px); }
 
-        .bg-fade-enter-active, .bg-fade-leave-active { transition: opacity 1.0s ease; }
+        .bg-fade-enter-active, .bg-fade-leave-active { transition: opacity 0.8s ease; }
         .bg-fade-enter-from, .bg-fade-leave-to { opacity: 0; }
         
         .modal-enter-active, .modal-leave-active { transition: all 0.3s ease; }
-        .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(1.05); }
+        .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
 
-        /* 适配刘海屏和底部黑条 */
-        .safe-padding-top { padding-top: env(safe-area-inset-top); }
-        .safe-padding-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .safe-margin-bottom { margin-bottom: env(safe-area-inset-bottom); }
+        /* 刘海屏安全区 */
+        .safe-pt { padding-top: env(safe-area-inset-top); }
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+        .safe-mb { margin-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body>
 
-    <!-- 主容器：使用 h-full 和 fixed 布局来确保在 iOS 上不乱跑 -->
-    <div id="app" class="w-full max-w-md mx-auto h-full bg-white shadow-2xl relative overflow-hidden flex flex-col safe-padding-top">
+    <div id="app" class="w-full max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden flex flex-col safe-pt">
         
         <!-- 0. 考前引导弹窗 -->
         <transition name="modal">
@@ -98,22 +117,23 @@
                         <p>🔇 <b>环境要求</b><br>请确保接下来10分钟不被打扰。</p>
                     </div>
                     
-                    <button v-if="countdown > 0" disabled class="w-full bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-lg cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                    <!-- 倒计时状态 -->
+                    <button v-if="isCountingDown" disabled class="w-full bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-lg cursor-not-allowed transition-colors flex items-center justify-center gap-2">
                         <svg class="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         阅读须知 ({{ countdown }}s)
                     </button>
                     
-                    <button v-else @click="confirmStart" class="w-full bg-[#FF2442] hover:bg-[#e61e3a] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-red-200 transition-transform active:scale-95 safe-margin-bottom">
+                    <!-- 准备好状态 -->
+                    <button v-else @click="confirmStart" class="w-full bg-[#FF2442] hover:bg-[#e61e3a] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-red-200 transition-transform active:scale-95 safe-mb">
                         我准备好了
                     </button>
                 </div>
             </div>
         </transition>
 
-        <!-- 1. 封面页 (重点修复区域：电脑端滚动条已移除) -->
-        <!-- 修改说明：添加了 no-scrollbar 类，确保在 PC 端不显示滚动条，但在小屏幕仍可滚动 -->
-        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-padding-bottom no-scrollbar">
-            <div class="absolute top-[-10%] right-[-10%] w-40 h-40 bg-red-100 rounded-full blur-3xl opacity-50"></div>
+        <!-- 1. 封面页 -->
+        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-pb no-scrollbar">
+            <div class="absolute top-[-10%] right-[-10%] w-40 h-40 bg-red-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
             
             <div class="w-[45vw] max-w-[200px] aspect-square animate-float relative z-10 flex-shrink-0">
                 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-2xl rounded-[2.5rem]">
@@ -134,7 +154,7 @@
 
             <div class="relative z-10 flex-shrink-0 w-full">
                 <div class="inline-block px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold mb-3 tracking-wide border border-red-100">
-                    国际公认标准 • 90个条目
+                    国际公认标准 • 90项指标
                 </div>
                 <h1 class="text-4xl font-black mb-2 tracking-tight leading-tight text-gradient-title">
                     SCL-90<br>深度心理测评
@@ -146,11 +166,9 @@
             </div>
 
             <div class="w-full relative z-10 flex-shrink-0 mt-auto mb-4">
-                <button @click="triggerStartModal" class="btn-active w-full bg-[#FF2442] hover:bg-[#e61e3a] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-colors relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                <button @click="triggerStartModal" class="w-full bg-[#FF2442] hover:bg-[#e61e3a] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-colors relative overflow-hidden group active:scale-95">
                     <span>开始探索真实的自己</span>
                 </button>
-                
                 <p class="text-[10px] text-slate-300 mt-4">结果仅供参考，不作为医学诊断依据</p>
             </div>
         </div>
@@ -158,15 +176,13 @@
         <!-- 2. 答题页 -->
         <div v-else-if="step === 'test'" class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
             <!-- 顶部状态栏 -->
-            <div class="pt-4 px-5 pb-3 bg-white/95 backdrop-blur-md z-30 shadow-sm rounded-b-3xl sticky top-0">
+            <div class="pt-4 px-5 pb-3 bg-white/95 backdrop-blur-md z-30 shadow-sm rounded-b-3xl sticky top-0 shrink-0">
                 <div class="h-8 mb-2 flex items-center justify-between relative">
                     <div class="flex items-center gap-2 min-w-[60px]">
-                        <transition name="fade">
-                            <button v-if="currentQuestionIndex > 0" @click="prevQuestion" class="group flex items-center gap-1 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all active:scale-95">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
-                                <span class="text-[11px] font-bold">上一题</span>
-                            </button>
-                        </transition>
+                        <button v-if="currentQuestionIndex > 0" @click="prevQuestion" class="group flex items-center gap-1 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                            <span class="text-[11px] font-bold">上一题</span>
+                        </button>
                     </div>
                     <div class="absolute left-1/2 -translate-x-1/2">
                          <span class="text-[11px] font-bold text-[#FF2442] tracking-wide opacity-90 bg-red-50 px-2 py-0.5 rounded-full">
@@ -183,52 +199,53 @@
                 </div>
             </div>
             
-            <!-- 答题区域 -->
-            <div class="flex-1 flex flex-col relative w-full max-w-md mx-auto">
-                <transition :name="transitionName">
-                    <div :key="currentQuestionIndex" class="absolute inset-0 p-4 pt-2 flex flex-col h-full overflow-y-auto no-scrollbar safe-padding-bottom">
-                        
-                        <!-- 题目卡片 -->
-                        <div class="flex-shrink-0 relative p-5 rounded-[1.5rem] shadow-lg text-center mb-4 min-h-[160px] flex flex-col items-center justify-center overflow-hidden border border-white/50 group bg-white">
-                            <div class="absolute inset-0 z-0">
-                                <transition name="bg-fade">
-                                    <img :key="currentMoodImage" :src="currentMoodImage" class="w-full h-full object-cover opacity-80 blur-[1px]" alt="mood">
-                                </transition>
+            <!-- 答题区域：修复 iOS flex 布局问题 -->
+            <div class="flex-1 overflow-y-auto no-scrollbar relative w-full max-w-md mx-auto safe-pb">
+                <div class="p-4 pt-2 min-h-full flex flex-col">
+                    <transition :name="transitionName" mode="out-in">
+                        <div :key="currentQuestionIndex" class="flex-1 flex flex-col w-full">
+                            
+                            <!-- 题目卡片 -->
+                            <div class="relative p-5 rounded-[1.5rem] shadow-lg text-center mb-6 min-h-[160px] flex flex-col items-center justify-center overflow-hidden border border-white/50 bg-white shrink-0">
+                                <div class="absolute inset-0 z-0 bg-slate-200">
+                                    <img :src="currentMoodImage" class="w-full h-full object-cover opacity-80 blur-[2px]" alt="mood" loading="lazy">
+                                </div>
+                                <div class="absolute inset-0 z-10 bg-white/85 backdrop-blur-[1px]"></div>
+                                <div class="relative z-20 w-full">
+                                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1.5 block">QUESTION {{ currentQuestionIndex + 1 }}</span>
+                                    <h2 class="text-lg font-bold text-slate-800 leading-snug drop-shadow-sm px-2">
+                                        {{ questions[currentQuestionIndex].text }}
+                                    </h2>
+                                </div>
                             </div>
-                            <div class="absolute inset-0 z-10 bg-white/85 backdrop-blur-[1px]"></div>
-                            <div class="relative z-20 w-full">
-                                <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1.5 block">QUESTION {{ currentQuestionIndex + 1 }}</span>
-                                <h2 class="text-lg font-bold text-slate-800 leading-snug drop-shadow-sm px-2">
-                                    {{ questions[currentQuestionIndex].text }}
-                                </h2>
-                            </div>
-                        </div>
 
-                        <!-- 选项列表 -->
-                        <div class="flex-grow flex flex-col justify-center gap-2.5 pb-4">
-                            <button v-for="(option, val) in optionsWithEmojis" :key="val" 
-                                @click="handleSelect(val)"
-                                :disabled="isTransitioning"
-                                class="w-full p-3 rounded-xl transition-all duration-150 flex items-center justify-between group relative overflow-hidden border shadow-sm active:scale-[0.98]"
-                                :class="[
-                                    tempSelectedOption == val 
-                                        ? 'bg-[#FF2442] text-white border-transparent shadow-red-200 ring-2 ring-red-100' 
-                                        : 'bg-white border-slate-100 text-slate-600 hover:border-red-200'
-                                ]"
-                            >
-                                <div class="flex items-center gap-3 relative z-10">
-                                    <span class="text-xl">{{ option.emoji }}</span>
-                                    <span class="font-bold text-sm">{{ option.text }}</span>
-                                </div>
-                                <div class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors relative z-10"
-                                     :class="tempSelectedOption == val ? 'border-white' : 'border-slate-200'">
-                                    <div class="w-2 h-2 rounded-full transition-opacity"
-                                         :class="[tempSelectedOption == val ? 'bg-white opacity-100' : 'bg-transparent opacity-0']"></div>
-                                </div>
-                            </button>
+                            <!-- 选项列表 -->
+                            <div class="flex flex-col gap-3 pb-6">
+                                <button v-for="(option, val) in optionsWithEmojis" :key="val" 
+                                    @click="handleSelect(val)"
+                                    :disabled="isTransitioning"
+                                    class="w-full p-4 rounded-xl transition-all duration-150 flex items-center justify-between group relative overflow-hidden border shadow-sm active:scale-[0.98]"
+                                    :class="[
+                                        tempSelectedOption == val 
+                                            ? 'bg-[#FF2442] text-white border-transparent shadow-red-200 ring-2 ring-red-100' 
+                                            : 'bg-white border-slate-100 text-slate-600'
+                                    ]"
+                                >
+                                    <div class="flex items-center gap-3 relative z-10">
+                                        <span class="text-2xl">{{ option.emoji }}</span>
+                                        <span class="font-bold text-sm">{{ option.text }}</span>
+                                    </div>
+                                    <div class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors relative z-10"
+                                         :class="tempSelectedOption == val ? 'border-white' : 'border-slate-200'">
+                                        <div class="w-2.5 h-2.5 rounded-full transition-opacity"
+                                             :class="[tempSelectedOption == val ? 'bg-white opacity-100' : 'bg-transparent opacity-0']"></div>
+                                    </div>
+                                </button>
+                            </div>
+                            
                         </div>
-                    </div>
-                </transition>
+                    </transition>
+                </div>
             </div>
         </div>
 
@@ -242,8 +259,8 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 overflow-y-auto safe-padding-bottom" id="report-capture">
-                <div class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="p-4 pb-20 overflow-y-auto safe-pb" id="report-capture-container">
+                <div id="report-capture" class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative">
                     <div class="bg-slate-900 text-white p-6 pb-12 relative overflow-hidden">
                         <div class="absolute top-[-50%] right-[-20%] w-64 h-64 bg-[#FF2442] rounded-full opacity-20 blur-3xl"></div>
                         <div class="absolute bottom-[-20%] left-[-10%] w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
@@ -355,34 +372,36 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 overflow-y-auto safe-padding-bottom" id="detail-capture">
-                <div class="mb-6 text-center">
-                    <h2 class="text-2xl font-bold text-slate-800">深度因子解析</h2>
-                    <p class="text-xs text-slate-400 mt-1">基于您本次测试结果的详细解读</p>
-                </div>
+            <div class="p-4 pb-20 overflow-y-auto safe-pb" id="detail-capture-container">
+                <div id="detail-capture" class="bg-[#F2F4F6]">
+                    <div class="mb-6 text-center">
+                        <h2 class="text-2xl font-bold text-slate-800">深度因子解析</h2>
+                        <p class="text-xs text-slate-400 mt-1">基于您本次测试结果的详细解读</p>
+                    </div>
 
-                <div class="space-y-4">
-                    <div v-for="factor in factors" :key="factor.name" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                        <div class="flex justify-between items-start mb-3 border-b border-slate-50 pb-3">
-                            <div>
-                                <h3 class="font-bold text-lg text-slate-800">{{ factor.name }}</h3>
-                                <p class="text-[10px] text-slate-400">{{ getFactorDesc(factor.name) }}</p>
+                    <div class="space-y-4">
+                        <div v-for="factor in factors" :key="factor.name" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                            <div class="flex justify-between items-start mb-3 border-b border-slate-50 pb-3">
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800">{{ factor.name }}</h3>
+                                    <p class="text-[10px] text-slate-400">{{ getFactorDesc(factor.name) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block text-2xl font-bold font-num" :class="getTextColorClass(factor.score)">{{ factor.score.toFixed(2) }}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded font-bold" :class="getStatusBadgeClass(factor.score)">{{ getLevelText(factor.score) }}</span>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <span class="block text-2xl font-bold font-num" :class="getTextColorClass(factor.score)">{{ factor.score.toFixed(2) }}</span>
-                                <span class="text-[10px] px-2 py-0.5 rounded font-bold" :class="getStatusBadgeClass(factor.score)">{{ getLevelText(factor.score) }}</span>
+                            
+                            <div class="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed">
+                                <span class="font-bold text-slate-700 block mb-1 text-xs">💡 专家解读：</span>
+                                {{ getFactorAnalysis(factor.name, factor.score) }}
                             </div>
-                        </div>
-                        
-                        <div class="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed">
-                            <span class="font-bold text-slate-700 block mb-1 text-xs">💡 专家解读：</span>
-                            {{ getFactorAnalysis(factor.name, factor.score) }}
                         </div>
                     </div>
-                </div>
 
-                <div class="mt-8 text-center pb-4">
-                    <p class="text-[10px] text-slate-300">SCL-90 Detail Analysis</p>
+                    <div class="mt-8 text-center pb-4">
+                        <p class="text-[10px] text-slate-300">SCL-90 Detail Analysis</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -398,7 +417,8 @@
                     step: 'cover',
                     showStartModal: false,
                     countdown: 3,
-                    timer: null, // 修改 1：将计时器提升为 data 属性，防止 iOS 下多重触发丢失引用
+                    isCountingDown: false, // 明确的倒计时状态标志
+                    timer: null,
                     currentQuestionIndex: 0,
                     tempSelectedOption: null,
                     isTransitioning: false,
@@ -412,6 +432,7 @@
                         4: { text: "偏重 (常有，影响较大)", emoji: "😫" },
                         5: { text: "严重 (十分严重)", emoji: "🥵" }
                     },
+                    // 题目数据保持不变...
                     factorDefinitions: [
                         { name: '躯体化', ids: [1,4,12,27,40,42,48,49,53,56,58,86] },
                         { name: '强迫症状', ids: [3,9,10,28,38,45,46,51,55,65] },
@@ -423,80 +444,16 @@
                         { name: '偏执', ids: [8,18,43,68,76,83] },
                         { name: '精神病性', ids: [7,16,35,62,77,84,85,87,88,90] }
                     ],
-                    // 优化后的 20-50 字精简版分析
                     factorInfo: {
-                        '躯体化': {
-                            desc: '身体不适感的投射',
-                            analysis: {
-                                low: '您的身心状态平衡，身体感觉良好，没有因心理因素导致的不适，请继续保持这种健康的生活状态。',
-                                mid: '近期可能偶有头痛或胃部不适，这或许是身体在提醒您该休息了，建议适度放松，缓解疲劳。',
-                                high: '躯体不适感明显，可能是心理压力转化为生理反应。在排除器质性病变后，建议进行身心放松训练。'
-                            }
-                        },
-                        '强迫症状': {
-                            desc: '无法摆脱的无意义思想或冲动',
-                            analysis: {
-                                low: '思维灵活开放，没有刻板或重复的强迫行为，做事效率高，心态轻松。',
-                                mid: '偶有反复检查或思虑过多的情况，但这未影响生活。建议减少对完美的过度追求，允许适度的不确定性。',
-                                high: '强迫倾向较明显，常被反复出现的念头困扰。建议尝试"顺其自然，为所当为"，减少对思维的对抗。'
-                            }
-                        },
-                        '人际敏感': {
-                            desc: '社交中的自卑或不自在',
-                            analysis: {
-                                low: '在人际交往中表现自信、大方，能舒适地处理人际关系，享受社交带来的乐趣。',
-                                mid: '在特定社交场合可能感到局促，或在意他人评价。这是常见的社交反应，建立自信可有效改善。',
-                                high: '人际交往中压力较大，容易自卑或误解他人。建议先从熟悉的社交圈开始，逐步练习表达真实的自己。'
-                            }
-                        },
-                        '抑郁': {
-                            desc: '苦闷情感与生活兴趣减退',
-                            analysis: {
-                                low: '情绪积极乐观，对生活充满热情和动力，心理能量充足，能够从日常生活中获得快乐。',
-                                mid: '近期情绪稍显低落，可能感到生活乏味。建议多晒太阳，进行有氧运动，主动寻找生活中的小确幸。',
-                                high: '情绪低落明显，可能伴有无助感。请不要独自承受，向亲友倾诉或寻求专业帮助是走出阴霾的第一步。'
-                            }
-                        },
-                        '焦虑': {
-                            desc: '无名紧张与神经过敏',
-                            analysis: {
-                                low: '内心平静安宁，情绪稳定性好，面对挑战时能保持沉着冷静，不易受焦虑干扰。',
-                                mid: '面临压力时会有正常的紧张感。尝试深呼吸或冥想，将注意力集中在当下，有助于缓解焦虑。',
-                                high: '焦虑水平较高，常感莫名的恐慌或坐立不安。建议练习正念冥想，减少对未来的灾难化想象。'
-                            }
-                        },
-                        '敌对': {
-                            desc: '厌烦、争论与不可控的脾气',
-                            analysis: {
-                                low: '性格温和，待人友善，情绪控制能力强，不易与人发生冲突，人际关系和谐。',
-                                mid: '遇挫折时偶有烦躁或发脾气。建议觉察愤怒背后的需求，尝试用更平和的方式表达不满。',
-                                high: '内心积压了较多愤怒，易发生冲突。建议寻找健康的宣泄渠道（如运动），学会用语言而非情绪解决问题。'
-                            }
-                        },
-                        '恐怖': {
-                            desc: '对特定场所或情境的非理性恐惧',
-                            analysis: {
-                                low: '胆大心细，没有特殊的恐惧心理，能够自如地在各种场合活动和社交。',
-                                mid: '对某些特定场合（如拥挤人群）有轻微不适，但能克服。这种自我保护机制属正常范围。',
-                                high: '存在明显的恐惧回避行为，可能影响生活。建议采用系统脱敏法，由轻到重逐步接触恐惧源。'
-                            }
-                        },
-                        '偏执': {
-                            desc: '猜疑、敌意与妄自尊大',
-                            analysis: {
-                                low: '信任他人，思维开放包容，不偏激，能够客观地看待问题，人际关系融洽。',
-                                mid: '偶尔会多疑或觉得不被理解。建议多换位思考，建立对他人的基本信任，减少无端的猜想。',
-                                high: '倾向于把他人好意当恶意，易产生对立情绪。建议检视自己的认知模式，尝试接纳不同的观点。'
-                            }
-                        },
-                        '精神病性': {
-                            desc: '幻觉、妄想或生活方式退缩',
-                            analysis: {
-                                low: '思维清晰，感知功能正常，与现实世界连接紧密，生活方式健康积极。',
-                                mid: '偶感孤独或思维跳跃，通常与极度疲劳有关。建议保证充足睡眠，避免长时间独处。',
-                                high: '思维或感知可能出现偏差，伴有明显的孤僻。请务必重视，建议进行专业的心理健康评估。'
-                            }
-                        }
+                        '躯体化': { desc: '身体不适感的投射', analysis: { low: '您的身心状态平衡，身体感觉良好。', mid: '近期可能偶有身体不适，建议适度放松。', high: '躯体不适感明显，建议进行身心放松训练。' } },
+                        '强迫症状': { desc: '无法摆脱的无意义思想', analysis: { low: '思维灵活开放，心态轻松。', mid: '偶有反复检查或思虑过多，建议减少对完美的追求。', high: '强迫倾向较明显，建议尝试"顺其自然"。' } },
+                        '人际敏感': { desc: '社交中的自卑或不自在', analysis: { low: '在人际交往中表现自信、大方。', mid: '在特定社交场合可能感到局促，建立自信可改善。', high: '人际交往压力大，建议逐步练习表达真实自己。' } },
+                        '抑郁': { desc: '苦闷情感与兴趣减退', analysis: { low: '情绪积极乐观，对生活充满热情。', mid: '近期情绪稍显低落，建议多晒太阳、运动。', high: '情绪低落明显，建议向亲友倾诉或寻求专业帮助。' } },
+                        '焦虑': { desc: '无名紧张与神经过敏', analysis: { low: '内心平静安宁，情绪稳定。', mid: '面临压力时有正常紧张感，深呼吸可缓解。', high: '焦虑水平较高，建议练习正念冥想。' } },
+                        '敌对': { desc: '厌烦、争论与脾气', analysis: { low: '性格温和，待人友善。', mid: '遇挫折时偶有烦躁，建议用平和方式表达不满。', high: '内心积压愤怒，建议寻找健康宣泄渠道。' } },
+                        '恐怖': { desc: '非理性恐惧', analysis: { low: '胆大心细，无特殊恐惧心理。', mid: '对特定场合有轻微不适，属正常保护机制。', high: '存在明显回避行为，建议逐步接触恐惧源。' } },
+                        '偏执': { desc: '猜疑与敌意', analysis: { low: '信任他人，思维开放包容。', mid: '偶尔多疑，建议多换位思考。', high: '易把好意当恶意，建议检视认知模式。' } },
+                        '精神病性': { desc: '幻觉或生活方式退缩', analysis: { low: '思维清晰，感知功能正常。', mid: '偶感孤独，通常与疲劳有关，建议充足睡眠。', high: '思维或感知可能偏差，建议专业评估。' } }
                     },
                     bgLibrary: {
                         'default': 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?q=80&w=800&auto=format&fit=crop',
@@ -586,39 +543,50 @@
                         title = '心理阳光 ☀️';
                         borderColor = 'border-green-500';
                         badgeClass = 'bg-green-100 text-green-700';
-                        text = "您的整体心理韧性极佳，情绪稳定性强。目前的您不仅没有明显的心理困扰，反而展现出了积极向上的生命力。这种状态有助于您应对日常挑战，请继续保持规律的作息和社交活动，享受当下的美好生活。";
+                        text = "您的整体心理韧性极佳，情绪稳定性强。目前的您不仅没有明显的心理困扰，反而展现出了积极向上的生命力。";
                     } else if (avg < 2.0) {
                         title = '状态平稳 🌿';
                         borderColor = 'border-emerald-400';
                         badgeClass = 'bg-emerald-100 text-emerald-700';
-                        text = `您的心理状态总体处于健康范围。虽然在个别方面（如${maxF ? maxF.name : '某些时刻'}）可能存在细微的情绪波动，但这属于正常人的生活反应。建议您在忙碌之余，给自己留出一些“放空时间”，保持劳逸结合。`;
+                        text = `您的心理状态总体处于健康范围。虽然在个别方面（如${maxF ? maxF.name : '某些时刻'}）可能存在细微的情绪波动，但这属于正常人的生活反应。`;
                     } else if (avg < 3.0) {
                         title = '轻度预警 ⚠️';
                         borderColor = 'border-yellow-400';
                         badgeClass = 'bg-yellow-100 text-yellow-800';
-                        text = `检测到您近期可能承受了一定的心理压力，尤其在【${maxF ? maxF.name : '情绪'}】方面表现出了一些困扰。这并不是疾病的信号，而是身心在提醒您“需要休息了”。建议尝试与信任的朋友倾诉，或进行适当的户外运动来释放压力。`;
+                        text = `检测到您近期可能承受了一定的心理压力，尤其在【${maxF ? maxF.name : '情绪'}】方面表现出了一些困扰。`;
                     } else {
                         title = '重点关注 🆘';
                         borderColor = 'border-red-500';
                         badgeClass = 'bg-red-100 text-red-700';
-                        text = `您的测试结果显示，目前的心理负担较重，且在多个维度（特别是${maxF ? maxF.name : '情绪'}）存在明显的痛苦体验。这种状态可能会影响您的日常生活或工作效率。请不要独自硬扛，强烈建议您寻求专业的心理咨询师帮助，专业的疏导能让您更快走出阴霾。`;
+                        text = `您的测试结果显示，目前的心理负担较重，且在多个维度（特别是${maxF ? maxF.name : '情绪'}）存在明显的痛苦体验。请不要独自硬扛。`;
                     }
                     return { title, text, borderColor, badgeClass };
                 }
             },
             methods: {
                 triggerStartModal() {
+                    // 1. 先显示弹窗
                     this.showStartModal = true;
-                    // 修改 2：清理之前的定时器，防止 Apple 设备上因点击过快导致的多重倒计时并发 bug
-                    if (this.timer) clearInterval(this.timer);
+                    // 2. 状态重置
+                    this.isCountingDown = true;
                     this.countdown = 3;
                     
-                    this.timer = setInterval(() => {
-                        this.countdown--;
-                        if (this.countdown <= 0) {
-                            clearInterval(this.timer);
-                        }
-                    }, 1000);
+                    // 3. 清除旧定时器
+                    if (this.timer) {
+                        clearInterval(this.timer);
+                        this.timer = null;
+                    }
+
+                    // 4. 使用 nextTick 确保 DOM 更新后再启动
+                    this.$nextTick(() => {
+                        this.timer = setInterval(() => {
+                            this.countdown--;
+                            if (this.countdown <= 0) {
+                                clearInterval(this.timer);
+                                this.isCountingDown = false; // 切换按钮状态
+                            }
+                        }, 1000);
+                    });
                 },
                 confirmStart() {
                     if (this.timer) clearInterval(this.timer);
@@ -630,10 +598,11 @@
                     if (this.currentQuestionIndex > 0) {
                         this.transitionName = 'slide-prev';
                         this.answers.pop();
-                        setTimeout(() => {
+                        // 稍微延迟更新 index 以配合动画
+                        this.$nextTick(() => {
                             this.currentQuestionIndex--;
                             this.tempSelectedOption = null;
-                        }, 10);
+                        });
                     }
                 },
 
@@ -652,7 +621,7 @@
                         } else {
                             this.calculateResult();
                         }
-                    }, 300);
+                    }, 250); // 略微缩短等待时间提高响应感
                 },
 
                 goToDetail() {
@@ -660,7 +629,6 @@
                 },
                 backToSummary() {
                     this.step = 'result';
-                    // 返回概览页时重新渲染图表
                     this.$nextTick(() => this.renderChart());
                 },
 
@@ -714,8 +682,6 @@
                     if (!canvas) return;
 
                     const ctx = canvas.getContext('2d');
-                    
-                    // 关键：销毁旧实例，防止重叠
                     if (this.chartInstance) {
                         this.chartInstance.destroy();
                         this.chartInstance = null;
@@ -759,26 +725,51 @@
                         }
                     });
                 },
+                // 终极修复：克隆节点截图法
                 downloadReport(elementId) {
-                    const element = document.getElementById(elementId);
-                    const originalOverflow = element.style.overflow;
-                    element.style.overflow = 'visible'; 
+                    const originalElement = document.getElementById(elementId);
+                    if (!originalElement) return;
+
+                    // 1. 克隆节点
+                    const clone = originalElement.cloneNode(true);
                     
-                    html2canvas(element, {
-                        scale: 2,
+                    // 2. 设置克隆节点的样式，确保它完整展开且不可见
+                    clone.style.position = 'absolute';
+                    clone.style.top = '-9999px';
+                    clone.style.left = '0';
+                    clone.style.width = originalElement.offsetWidth + 'px'; // 保持宽度一致
+                    clone.style.height = 'auto'; // 高度自适应
+                    clone.style.overflow = 'visible'; // 允许溢出
+                    clone.style.zIndex = '-1';
+                    
+                    // 移除可能影响高度计算的类
+                    clone.classList.remove('overflow-y-auto', 'safe-pb', 'h-full');
+
+                    // 3. 插入 DOM
+                    document.body.appendChild(clone);
+
+                    // 4. 截图
+                    html2canvas(clone, {
+                        scale: 2, // 保持清晰度
                         useCORS: true,
+                        allowTaint: true, // 允许跨域图片渲染
                         backgroundColor: "#F2F4F6",
-                        ignoreElements: (el) => el.tagName === 'BUTTON'
+                        logging: false,
+                        ignoreElements: (el) => el.tagName === 'BUTTON' // 忽略按钮
                     }).then(canvas => {
-                        element.style.overflow = originalOverflow;
+                        // 5. 生成下载
                         const link = document.createElement('a');
-                        link.download = '心理画像_详细分析.png';
+                        link.download = `心理画像_${new Date().getTime()}.png`;
                         link.href = canvas.toDataURL("image/png");
                         link.click();
-                        alert("✅ 报告已生成！手机请截屏，电脑直接下载文件到本地。");
-                    }).catch(() => {
-                        element.style.overflow = originalOverflow;
-                        alert("生成图片失败，请重试");
+                        
+                        // 6. 清理
+                        document.body.removeChild(clone);
+                        alert("✅ 报告已生成！请长按保存图片。");
+                    }).catch(err => {
+                        console.error(err);
+                        document.body.removeChild(clone);
+                        alert("生成失败，建议直接系统截图保存。");
                     });
                 }
             }
