@@ -2,14 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- viewport-fit=cover 适配刘海屏 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SCL-90 深度心理测评报告</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入 html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -103,7 +100,6 @@
 
     <div id="app" class="w-full max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden flex flex-col safe-pt">
         
-        <!-- 0. 考前引导弹窗 -->
         <transition name="modal">
             <div v-if="showStartModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-sm" @touchmove.prevent>
                 <div class="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden animate-float">
@@ -117,13 +113,11 @@
                         <p>🔇 <b>环境要求</b><br>请确保接下来10分钟不被打扰。</p>
                     </div>
                     
-                    <!-- 倒计时状态 -->
                     <button v-if="isCountingDown" disabled class="w-full bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-lg cursor-not-allowed transition-colors flex items-center justify-center gap-2">
                         <svg class="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         阅读须知 ({{ countdown }}s)
                     </button>
                     
-                    <!-- 准备好状态 -->
                     <button v-else @click="confirmStart" class="w-full bg-[#FF2442] hover:bg-[#e61e3a] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-red-200 transition-transform active:scale-95 safe-mb">
                         我准备好了
                     </button>
@@ -131,7 +125,6 @@
             </div>
         </transition>
 
-        <!-- 1. 封面页 -->
         <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-pb no-scrollbar">
             <div class="absolute top-[-10%] right-[-10%] w-40 h-40 bg-red-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
             
@@ -173,9 +166,7 @@
             </div>
         </div>
 
-        <!-- 2. 答题页 -->
         <div v-else-if="step === 'test'" class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
-            <!-- 顶部状态栏 -->
             <div class="pt-4 px-5 pb-3 bg-white/95 backdrop-blur-md z-30 shadow-sm rounded-b-3xl sticky top-0 shrink-0">
                 <div class="h-8 mb-2 flex items-center justify-between relative">
                     <div class="flex items-center gap-2 min-w-[60px]">
@@ -199,13 +190,11 @@
                 </div>
             </div>
             
-            <!-- 答题区域：修复 iOS flex 布局问题 -->
             <div class="flex-1 overflow-y-auto no-scrollbar relative w-full max-w-md mx-auto safe-pb">
                 <div class="p-4 pt-2 min-h-full flex flex-col">
                     <transition :name="transitionName" mode="out-in">
                         <div :key="currentQuestionIndex" class="flex-1 flex flex-col w-full">
                             
-                            <!-- 题目卡片 -->
                             <div class="relative p-5 rounded-[1.5rem] shadow-lg text-center mb-6 min-h-[160px] flex flex-col items-center justify-center overflow-hidden border border-white/50 bg-white shrink-0">
                                 <div class="absolute inset-0 z-0 bg-slate-200">
                                     <img :src="currentMoodImage" class="w-full h-full object-cover opacity-80 blur-[2px]" alt="mood" loading="lazy">
@@ -219,7 +208,6 @@
                                 </div>
                             </div>
 
-                            <!-- 选项列表 -->
                             <div class="flex flex-col gap-3 pb-6">
                                 <button v-for="(option, val) in optionsWithEmojis" :key="val" 
                                     @click="handleSelect(val)"
@@ -249,7 +237,6 @@
             </div>
         </div>
 
-        <!-- 3. 结果概览页 -->
         <div v-else-if="step === 'result'" class="flex-1 flex flex-col bg-[#F2F4F6] overflow-y-auto no-scrollbar relative h-full">
             <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-40 border-b border-white/50">
                 <span class="font-bold text-slate-800 text-sm">📋 测评档案</span>
@@ -259,7 +246,7 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 overflow-y-auto safe-pb" id="report-capture-container">
+            <div class="p-4 pb-20 safe-pb" id="report-capture-container">
                 <div id="report-capture" class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative">
                     <div class="bg-slate-900 text-white p-6 pb-12 relative overflow-hidden">
                         <div class="absolute top-[-50%] right-[-20%] w-64 h-64 bg-[#FF2442] rounded-full opacity-20 blur-3xl"></div>
@@ -359,7 +346,6 @@
             </div>
         </div>
 
-        <!-- 4. 深度详细分析页 -->
         <div v-else-if="step === 'result-detail'" class="flex-1 flex flex-col bg-[#F2F4F6] overflow-y-auto no-scrollbar relative h-full">
             <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-40 border-b border-white/50">
                 <button @click="backToSummary" class="text-slate-600 flex items-center gap-1 text-sm font-bold bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors">
@@ -372,7 +358,7 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 overflow-y-auto safe-pb" id="detail-capture-container">
+            <div class="p-4 pb-20 safe-pb" id="detail-capture-container">
                 <div id="detail-capture" class="bg-[#F2F4F6]">
                     <div class="mb-6 text-center">
                         <h2 class="text-2xl font-bold text-slate-800">深度因子解析</h2>
