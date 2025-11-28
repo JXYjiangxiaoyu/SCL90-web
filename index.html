@@ -23,23 +23,33 @@
             width: 100%;
             height: 100%; /* Fallback */
             height: var(--app-height);
-            overflow: hidden;
+            overflow: hidden; /* 禁止最外层滚动，防止橡皮筋效果带动整个页面 */
             background-color: #F2F4F6;
             font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none; /* 禁止长按呼出菜单 */
+            -webkit-touch-callout: none;
+            position: fixed; /* 强制固定，解决部分iOS版本滚动穿透 */
         }
 
         #app {
             height: 100%;
             height: var(--app-height);
+            display: flex;
+            flex-direction: column;
         }
 
         .font-num { font-family: 'Outfit', sans-serif; }
         
-        /* 隐藏滚动条 */
+        /* 隐藏滚动条但保留功能 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* iOS 专属滚动优化类 */
+        .ios-scroll {
+            -webkit-overflow-scrolling: touch; /* 开启惯性滚动 */
+            overscroll-behavior-y: contain; /* 防止滚动链 */
+            scroll-behavior: smooth;
+        }
 
         .report-bg {
             background-color: #ffffff;
@@ -50,7 +60,8 @@
         .glass-nav {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px); /* Safari 支持 */
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
         
         .text-gradient-title {
@@ -71,26 +82,20 @@
         }
         .animate-float { animation: float 6s ease-in-out infinite; }
 
-        /* 优化转场动画，移除 absolute 防止 iOS 高度塌陷，改为 transform 控制 */
         .slide-next-enter-active, .slide-next-leave-active,
         .slide-prev-enter-active, .slide-prev-leave-active {
             transition: all 0.3s ease-out;
         }
         
-        /* 简单的淡入淡出+位移，避免复杂的 position 切换 */
         .slide-next-enter-from { opacity: 0; transform: translateX(20px); }
         .slide-next-leave-to { opacity: 0; transform: translateX(-20px); }
 
         .slide-prev-enter-from { opacity: 0; transform: translateX(-20px); }
         .slide-prev-leave-to { opacity: 0; transform: translateX(20px); }
 
-        .bg-fade-enter-active, .bg-fade-leave-active { transition: opacity 0.8s ease; }
-        .bg-fade-enter-from, .bg-fade-leave-to { opacity: 0; }
-        
         .modal-enter-active, .modal-leave-active { transition: all 0.3s ease; }
         .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
 
-        /* 刘海屏安全区 */
         .safe-pt { padding-top: env(safe-area-inset-top); }
         .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
         .safe-mb { margin-bottom: env(safe-area-inset-bottom); }
@@ -125,7 +130,7 @@
             </div>
         </transition>
 
-        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto safe-pb no-scrollbar">
+        <div v-if="step === 'cover'" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 bg-gradient-to-b from-rose-50 via-white to-white text-center relative z-10 overflow-y-auto ios-scroll safe-pb no-scrollbar w-full">
             <div class="absolute top-[-10%] right-[-10%] w-40 h-40 bg-red-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
             
             <div class="w-[45vw] max-w-[200px] aspect-square animate-float relative z-10 flex-shrink-0">
@@ -166,8 +171,8 @@
             </div>
         </div>
 
-        <div v-else-if="step === 'test'" class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
-            <div class="pt-4 px-5 pb-3 bg-white/95 backdrop-blur-md z-30 shadow-sm rounded-b-3xl sticky top-0 shrink-0">
+        <div v-else-if="step === 'test'" class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden w-full h-full">
+            <div class="pt-4 px-5 pb-3 bg-white/95 backdrop-blur-md z-30 shadow-sm rounded-b-3xl shrink-0 relative">
                 <div class="h-8 mb-2 flex items-center justify-between relative">
                     <div class="flex items-center gap-2 min-w-[60px]">
                         <button v-if="currentQuestionIndex > 0" @click="prevQuestion" class="group flex items-center gap-1 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all active:scale-95">
@@ -190,8 +195,8 @@
                 </div>
             </div>
             
-            <div class="flex-1 overflow-y-auto no-scrollbar relative w-full max-w-md mx-auto safe-pb">
-                <div class="p-4 pt-2 min-h-full flex flex-col">
+            <div class="flex-1 overflow-y-auto ios-scroll no-scrollbar w-full relative">
+                <div class="p-4 pt-2 min-h-full flex flex-col safe-pb">
                     <transition :name="transitionName" mode="out-in">
                         <div :key="currentQuestionIndex" class="flex-1 flex flex-col w-full">
                             
@@ -237,8 +242,8 @@
             </div>
         </div>
 
-        <div v-else-if="step === 'result'" class="flex-1 flex flex-col bg-[#F2F4F6] overflow-y-auto no-scrollbar relative h-full">
-            <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-40 border-b border-white/50">
+        <div v-else-if="step === 'result'" class="flex-1 flex flex-col bg-[#F2F4F6] relative h-full w-full overflow-hidden">
+            <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center z-40 shrink-0 relative">
                 <span class="font-bold text-slate-800 text-sm">📋 测评档案</span>
                 <button @click="downloadReport('report-capture')" class="bg-slate-900 text-white text-xs px-4 py-2 rounded-full font-medium hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-lg shadow-slate-300/50">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
@@ -246,108 +251,110 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 safe-pb" id="report-capture-container">
-                <div id="report-capture" class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative">
-                    <div class="bg-slate-900 text-white p-6 pb-12 relative overflow-hidden">
-                        <div class="absolute top-[-50%] right-[-20%] w-64 h-64 bg-[#FF2442] rounded-full opacity-20 blur-3xl"></div>
-                        <div class="absolute bottom-[-20%] left-[-10%] w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
-                        <div class="flex justify-between items-start relative z-10">
-                            <div>
-                                <h1 class="text-2xl font-bold mb-1">心理健康画像</h1>
-                                <p class="text-slate-400 text-xs font-num tracking-wider uppercase">SCL-90 / REF: {{ Math.floor(Math.random()*100000) }}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-3xl font-bold font-num">{{ totalScore }}</p>
-                                <p class="text-[10px] text-slate-400 uppercase">Total Score</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mx-4 -mt-8 relative z-10 bg-white p-5 rounded-2xl shadow-lg border-l-4" :class="dynamicAssessment.borderColor">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs text-slate-400 uppercase font-bold tracking-wide">综合状态评估</span>
-                            <span class="px-2 py-1 rounded text-xs font-bold" :class="dynamicAssessment.badgeClass">
-                                {{ dynamicAssessment.title }}
-                            </span>
-                        </div>
-                        <p class="text-sm text-slate-600 leading-relaxed text-justify">
-                            {{ dynamicAssessment.text }}
-                        </p>
-                    </div>
-
-                    <div class="p-6">
-                        <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
-                            <span class="w-1 h-4 bg-[#FF2442] rounded-full mr-2"></span>
-                            症状分布雷达
-                        </h4>
-                        <div class="w-full aspect-square max-h-[260px] relative flex items-center justify-center">
-                            <canvas id="radarChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3 px-4 mb-6">
-                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
-                            <p class="text-xs text-slate-400 mb-1">平均分</p>
-                            <p class="text-xl font-bold text-slate-800 font-num">{{ avgScore }}</p>
-                        </div>
-                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
-                            <p class="text-xs text-slate-400 mb-1">阳性项目</p>
-                            <p class="text-xl font-bold text-[#FF2442] font-num">{{ positiveItems }}</p>
-                            <p class="text-[10px] text-slate-400">/ 90</p>
-                        </div>
-                        <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
-                            <p class="text-xs text-slate-400 mb-1">阴性项目</p>
-                            <p class="text-xl font-bold text-green-600 font-num">{{ 90 - positiveItems }}</p>
-                        </div>
-                    </div>
-
-                    <div class="px-4 mb-6">
-                        <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
-                            <span class="w-1 h-4 bg-blue-500 rounded-full mr-2"></span>
-                            深度因子解码
-                        </h4>
-                        <div class="grid grid-cols-[25%_25%_20%_30%] gap-2 mb-2 px-2">
-                            <div class="text-[10px] font-bold text-slate-400">因子名称</div>
-                            <div class="text-[10px] font-bold text-slate-400 text-center">均分</div>
-                            <div class="text-[10px] font-bold text-slate-400 text-center">总分</div>
-                            <div class="text-[10px] font-bold text-slate-400 text-right">状态评级</div>
-                        </div>
-                        <div class="space-y-2">
-                            <div v-for="factor in factors" :key="factor.name" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm grid grid-cols-[25%_25%_20%_30%] gap-2 items-center">
-                                <div class="text-sm font-bold text-slate-700 truncate">{{ factor.name }}</div>
-                                <div class="text-center">
-                                    <span class="text-sm font-bold font-num" :class="getTextColorClass(factor.score)">
-                                        {{ factor.score.toFixed(2) }}
-                                    </span>
+            <div class="flex-1 overflow-y-auto ios-scroll no-scrollbar min-h-0 w-full">
+                <div class="p-4 pb-20 safe-pb" id="report-capture-container">
+                    <div id="report-capture" class="report-bg rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative">
+                        <div class="bg-slate-900 text-white p-6 pb-12 relative overflow-hidden">
+                            <div class="absolute top-[-50%] right-[-20%] w-64 h-64 bg-[#FF2442] rounded-full opacity-20 blur-3xl"></div>
+                            <div class="absolute bottom-[-20%] left-[-10%] w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
+                            <div class="flex justify-between items-start relative z-10">
+                                <div>
+                                    <h1 class="text-2xl font-bold mb-1">心理健康画像</h1>
+                                    <p class="text-slate-400 text-xs font-num tracking-wider uppercase">SCL-90 / REF: {{ Math.floor(Math.random()*100000) }}</p>
                                 </div>
-                                <div class="text-center">
-                                    <span class="text-xs font-bold text-slate-500 font-num">{{ factor.rawSum }}</span>
-                                </div>
-                                <div class="flex justify-end">
-                                    <span class="text-[10px] px-2 py-1 rounded font-bold" :class="getStatusBadgeClass(factor.score)">
-                                        {{ getLevelText(factor.score) }}
-                                    </span>
+                                <div class="text-right">
+                                    <p class="text-3xl font-bold font-num">{{ totalScore }}</p>
+                                    <p class="text-[10px] text-slate-400 uppercase">Total Score</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        
+                        <div class="mx-4 -mt-8 relative z-10 bg-white p-5 rounded-2xl shadow-lg border-l-4" :class="dynamicAssessment.borderColor">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-slate-400 uppercase font-bold tracking-wide">综合状态评估</span>
+                                <span class="px-2 py-1 rounded text-xs font-bold" :class="dynamicAssessment.badgeClass">
+                                    {{ dynamicAssessment.title }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-slate-600 leading-relaxed text-justify">
+                                {{ dynamicAssessment.text }}
+                            </p>
+                        </div>
 
-                    <div class="px-4 mb-6">
-                        <button @click="goToDetail" class="w-full py-4 bg-white border-2 border-slate-100 rounded-2xl text-slate-600 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 hover:border-slate-200 transition-colors shadow-sm">
-                            <span>📖 查看详细因子分析</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
-                        </button>
-                    </div>
-                    
-                    <div class="text-center py-6 bg-slate-900">
-                        <p class="text-[10px] text-slate-500 mt-1">SCL-90 · 心理档案 (仅供参考)</p>
+                        <div class="p-6">
+                            <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
+                                <span class="w-1 h-4 bg-[#FF2442] rounded-full mr-2"></span>
+                                症状分布雷达
+                            </h4>
+                            <div class="w-full aspect-square max-h-[260px] relative flex items-center justify-center">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3 px-4 mb-6">
+                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                                <p class="text-xs text-slate-400 mb-1">平均分</p>
+                                <p class="text-xl font-bold text-slate-800 font-num">{{ avgScore }}</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                                <p class="text-xs text-slate-400 mb-1">阳性项目</p>
+                                <p class="text-xl font-bold text-[#FF2442] font-num">{{ positiveItems }}</p>
+                                <p class="text-[10px] text-slate-400">/ 90</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                                <p class="text-xs text-slate-400 mb-1">阴性项目</p>
+                                <p class="text-xl font-bold text-green-600 font-num">{{ 90 - positiveItems }}</p>
+                            </div>
+                        </div>
+
+                        <div class="px-4 mb-6">
+                            <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
+                                <span class="w-1 h-4 bg-blue-500 rounded-full mr-2"></span>
+                                深度因子解码
+                            </h4>
+                            <div class="grid grid-cols-[25%_25%_20%_30%] gap-2 mb-2 px-2">
+                                <div class="text-[10px] font-bold text-slate-400">因子名称</div>
+                                <div class="text-[10px] font-bold text-slate-400 text-center">均分</div>
+                                <div class="text-[10px] font-bold text-slate-400 text-center">总分</div>
+                                <div class="text-[10px] font-bold text-slate-400 text-right">状态评级</div>
+                            </div>
+                            <div class="space-y-2">
+                                <div v-for="factor in factors" :key="factor.name" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm grid grid-cols-[25%_25%_20%_30%] gap-2 items-center">
+                                    <div class="text-sm font-bold text-slate-700 truncate">{{ factor.name }}</div>
+                                    <div class="text-center">
+                                        <span class="text-sm font-bold font-num" :class="getTextColorClass(factor.score)">
+                                            {{ factor.score.toFixed(2) }}
+                                        </span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="text-xs font-bold text-slate-500 font-num">{{ factor.rawSum }}</span>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <span class="text-[10px] px-2 py-1 rounded font-bold" :class="getStatusBadgeClass(factor.score)">
+                                            {{ getLevelText(factor.score) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-4 mb-6">
+                            <button @click="goToDetail" class="w-full py-4 bg-white border-2 border-slate-100 rounded-2xl text-slate-600 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 hover:border-slate-200 transition-colors shadow-sm">
+                                <span>📖 查看详细因子分析</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                        
+                        <div class="text-center py-6 bg-slate-900">
+                            <p class="text-[10px] text-slate-500 mt-1">SCL-90 · 心理档案 (仅供参考)</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div v-else-if="step === 'result-detail'" class="flex-1 flex flex-col bg-[#F2F4F6] overflow-y-auto no-scrollbar relative h-full">
-            <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-40 border-b border-white/50">
+        <div v-else-if="step === 'result-detail'" class="flex-1 flex flex-col bg-[#F2F4F6] relative h-full w-full overflow-hidden">
+            <div class="glass-nav px-4 py-3 shadow-sm flex justify-between items-center z-40 shrink-0 relative">
                 <button @click="backToSummary" class="text-slate-600 flex items-center gap-1 text-sm font-bold bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                     返回概览
@@ -358,35 +365,37 @@
                 </button>
             </div>
 
-            <div class="p-4 pb-20 safe-pb" id="detail-capture-container">
-                <div id="detail-capture" class="bg-[#F2F4F6]">
-                    <div class="mb-6 text-center">
-                        <h2 class="text-2xl font-bold text-slate-800">深度因子解析</h2>
-                        <p class="text-xs text-slate-400 mt-1">基于您本次测试结果的详细解读</p>
-                    </div>
+            <div class="flex-1 overflow-y-auto ios-scroll no-scrollbar min-h-0 w-full">
+                <div class="p-4 pb-20 safe-pb" id="detail-capture-container">
+                    <div id="detail-capture" class="bg-[#F2F4F6]">
+                        <div class="mb-6 text-center">
+                            <h2 class="text-2xl font-bold text-slate-800">深度因子解析</h2>
+                            <p class="text-xs text-slate-400 mt-1">基于您本次测试结果的详细解读</p>
+                        </div>
 
-                    <div class="space-y-4">
-                        <div v-for="factor in factors" :key="factor.name" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                            <div class="flex justify-between items-start mb-3 border-b border-slate-50 pb-3">
-                                <div>
-                                    <h3 class="font-bold text-lg text-slate-800">{{ factor.name }}</h3>
-                                    <p class="text-[10px] text-slate-400">{{ getFactorDesc(factor.name) }}</p>
+                        <div class="space-y-4">
+                            <div v-for="factor in factors" :key="factor.name" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                                <div class="flex justify-between items-start mb-3 border-b border-slate-50 pb-3">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-slate-800">{{ factor.name }}</h3>
+                                        <p class="text-[10px] text-slate-400">{{ getFactorDesc(factor.name) }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="block text-2xl font-bold font-num" :class="getTextColorClass(factor.score)">{{ factor.score.toFixed(2) }}</span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded font-bold" :class="getStatusBadgeClass(factor.score)">{{ getLevelText(factor.score) }}</span>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="block text-2xl font-bold font-num" :class="getTextColorClass(factor.score)">{{ factor.score.toFixed(2) }}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded font-bold" :class="getStatusBadgeClass(factor.score)">{{ getLevelText(factor.score) }}</span>
+                                
+                                <div class="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed">
+                                    <span class="font-bold text-slate-700 block mb-1 text-xs">💡 专家解读：</span>
+                                    {{ getFactorAnalysis(factor.name, factor.score) }}
                                 </div>
-                            </div>
-                            
-                            <div class="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed">
-                                <span class="font-bold text-slate-700 block mb-1 text-xs">💡 专家解读：</span>
-                                {{ getFactorAnalysis(factor.name, factor.score) }}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mt-8 text-center pb-4">
-                        <p class="text-[10px] text-slate-300">SCL-90 Detail Analysis</p>
+                        <div class="mt-8 text-center pb-4">
+                            <p class="text-[10px] text-slate-300">SCL-90 Detail Analysis</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -403,7 +412,7 @@
                     step: 'cover',
                     showStartModal: false,
                     countdown: 3,
-                    isCountingDown: false, // 明确的倒计时状态标志
+                    isCountingDown: false, 
                     timer: null,
                     currentQuestionIndex: 0,
                     tempSelectedOption: null,
@@ -418,7 +427,6 @@
                         4: { text: "偏重 (常有，影响较大)", emoji: "😫" },
                         5: { text: "严重 (十分严重)", emoji: "🥵" }
                     },
-                    // 题目数据保持不变...
                     factorDefinitions: [
                         { name: '躯体化', ids: [1,4,12,27,40,42,48,49,53,56,58,86] },
                         { name: '强迫症状', ids: [3,9,10,28,38,45,46,51,55,65] },
@@ -551,25 +559,21 @@
             },
             methods: {
                 triggerStartModal() {
-                    // 1. 先显示弹窗
                     this.showStartModal = true;
-                    // 2. 状态重置
                     this.isCountingDown = true;
                     this.countdown = 3;
                     
-                    // 3. 清除旧定时器
                     if (this.timer) {
                         clearInterval(this.timer);
                         this.timer = null;
                     }
 
-                    // 4. 使用 nextTick 确保 DOM 更新后再启动
                     this.$nextTick(() => {
                         this.timer = setInterval(() => {
                             this.countdown--;
                             if (this.countdown <= 0) {
                                 clearInterval(this.timer);
-                                this.isCountingDown = false; // 切换按钮状态
+                                this.isCountingDown = false;
                             }
                         }, 1000);
                     });
@@ -584,7 +588,6 @@
                     if (this.currentQuestionIndex > 0) {
                         this.transitionName = 'slide-prev';
                         this.answers.pop();
-                        // 稍微延迟更新 index 以配合动画
                         this.$nextTick(() => {
                             this.currentQuestionIndex--;
                             this.tempSelectedOption = null;
@@ -607,7 +610,7 @@
                         } else {
                             this.calculateResult();
                         }
-                    }, 250); // 略微缩短等待时间提高响应感
+                    }, 250);
                 },
 
                 goToDetail() {
@@ -711,45 +714,37 @@
                         }
                     });
                 },
-                // 终极修复：克隆节点截图法
                 downloadReport(elementId) {
                     const originalElement = document.getElementById(elementId);
                     if (!originalElement) return;
 
-                    // 1. 克隆节点
                     const clone = originalElement.cloneNode(true);
                     
-                    // 2. 设置克隆节点的样式，确保它完整展开且不可见
                     clone.style.position = 'absolute';
                     clone.style.top = '-9999px';
                     clone.style.left = '0';
-                    clone.style.width = originalElement.offsetWidth + 'px'; // 保持宽度一致
-                    clone.style.height = 'auto'; // 高度自适应
-                    clone.style.overflow = 'visible'; // 允许溢出
+                    clone.style.width = originalElement.offsetWidth + 'px'; 
+                    clone.style.height = 'auto'; 
+                    clone.style.overflow = 'visible'; 
                     clone.style.zIndex = '-1';
                     
-                    // 移除可能影响高度计算的类
-                    clone.classList.remove('overflow-y-auto', 'safe-pb', 'h-full');
+                    clone.classList.remove('overflow-y-auto', 'safe-pb', 'h-full', 'ios-scroll');
 
-                    // 3. 插入 DOM
                     document.body.appendChild(clone);
 
-                    // 4. 截图
                     html2canvas(clone, {
-                        scale: 2, // 保持清晰度
+                        scale: 2,
                         useCORS: true,
-                        allowTaint: true, // 允许跨域图片渲染
+                        allowTaint: true,
                         backgroundColor: "#F2F4F6",
                         logging: false,
-                        ignoreElements: (el) => el.tagName === 'BUTTON' // 忽略按钮
+                        ignoreElements: (el) => el.tagName === 'BUTTON'
                     }).then(canvas => {
-                        // 5. 生成下载
                         const link = document.createElement('a');
                         link.download = `心理画像_${new Date().getTime()}.png`;
                         link.href = canvas.toDataURL("image/png");
                         link.click();
                         
-                        // 6. 清理
                         document.body.removeChild(clone);
                         alert("✅ 报告已生成！请长按保存图片。");
                     }).catch(err => {
