@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
@@ -281,18 +280,7 @@
                             </p>
                         </div>
 
-                        <div class="p-6">
-                            <h4 class="font-bold text-slate-800 text-sm mb-4 flex items-center">
-                                <span class="w-1 h-4 bg-[#FF2442] rounded-full mr-2"></span>
-                                症状分布雷达
-                            </h4>
-                            <div class="w-full aspect-square max-h-[260px] relative flex items-center justify-center">
-                                <canvas id="radarChart"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3 px-4 mb-6">
-                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
+                        <div class="grid grid-cols-3 gap-3 px-4 mb-6 mt-6"> <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-100">
                                 <p class="text-xs text-slate-400 mb-1">平均分</p>
                                 <p class="text-xl font-bold text-slate-800 font-num">{{ avgScore }}</p>
                             </div>
@@ -418,7 +406,7 @@
                     tempSelectedOption: null,
                     isTransitioning: false,
                     transitionName: 'slide-next',
-                    chartInstance: null,
+                    // chartInstance: null, // 已移除
                     answers: [],
                     optionsWithEmojis: {
                         1: { text: "从无 (没有感觉)", emoji: "😶" },
@@ -618,7 +606,7 @@
                 },
                 backToSummary() {
                     this.step = 'result';
-                    this.$nextTick(() => this.renderChart());
+                    // 已移除 this.renderChart() 调用
                 },
 
                 getScoreColorClass(score) {
@@ -664,56 +652,9 @@
                     }));
                     
                     this.step = 'result';
-                    this.$nextTick(() => this.renderChart());
+                    // 已移除 this.$nextTick(() => this.renderChart());
                 },
-                renderChart() {
-                    const canvas = document.getElementById('radarChart');
-                    if (!canvas) return;
-
-                    const ctx = canvas.getContext('2d');
-                    if (this.chartInstance) {
-                        this.chartInstance.destroy();
-                        this.chartInstance = null;
-                    }
-
-                    const gradient = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
-                    gradient.addColorStop(0, 'rgba(255, 36, 66, 0.1)');
-                    gradient.addColorStop(1, 'rgba(255, 36, 66, 0.4)');
-
-                    this.chartInstance = new Chart(ctx, {
-                        type: 'radar',
-                        data: {
-                            labels: this.factors.map(f => f.name),
-                            datasets: [{
-                                label: '因子分',
-                                data: this.factors.map(f => f.score),
-                                backgroundColor: gradient,
-                                borderColor: '#FF2442',
-                                borderWidth: 2,
-                                pointBackgroundColor: '#fff',
-                                pointBorderColor: '#FF2442',
-                                pointRadius: 3
-                            }]
-                        },
-                        options: {
-                            maintainAspectRatio: false,
-                            scales: {
-                                r: {
-                                    angleLines: { color: '#eee' },
-                                    grid: { color: '#f0f0f0' },
-                                    pointLabels: { 
-                                        font: { size: 11, family: "'Noto Sans SC', sans-serif" },
-                                        color: '#64748b'
-                                    },
-                                    suggestedMin: 0,
-                                    suggestedMax: 4,
-                                    ticks: { display: false }
-                                }
-                            },
-                            plugins: { legend: { display: false } }
-                        }
-                    });
-                },
+                // renderChart 函数已移除
                 downloadReport(elementId) {
                     const originalElement = document.getElementById(elementId);
                     if (!originalElement) return;
